@@ -1,0 +1,11 @@
+There are a number of simplifying assumptions one can make about a standard Cribbage hand that can't be made in general.
+These are largely to do with limited hand size, as well as cards in a deck.
+
+In no particular order, for a 5-card scoring pool (4 hand or crib cards + starter) using a standard 52-card deck:
+
+ 1. There cannot be more than one run of length three or greater, unless is part of a longer run
+    - this is because there are only 5 cards, and this would require 6 or more.
+
+2. There cannot be more than 4 of a kind because each deck only has 4 of each rank.
+
+3. There cannot be a pair / three of a kind / four of a kind / five of a kind all of a single suit because there is only one card of each suit+rank pair.
