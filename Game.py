@@ -1,6 +1,7 @@
 from Deck import Deck
 from Card import Card
 import random, itertools
+import time
 
 
 
@@ -20,12 +21,63 @@ class Game:
         self.ai_score = 0
 
         self.dealer = "player"
+        self.event_delay = 2
 
+    def deal(self):
+
+        self.deck.shuffle()
+
+        self.playerhand = list()
+        self.aihand = list()
+
+        # deal 6 cards to player and AI
+        for i in range(0, 12):
+            if i % 2 == 0:
+                self.playerhand.append(self.deck.shuffled.pop(0))
+            else:
+                self.aihand.append(self.deck.shuffled.pop(0))
+
+        #print([str(item) for item in self.playerhand])
+
+        # AI picks two random cards for crib
+        self.crib.append(self.aihand.pop(random.randint(0, 5)))
+        self.crib.append(self.aihand.pop(random.randint(0, 4)))
+
+        # player picks two cards for crib
+        #print("Pick the index of the first card to add to the crib, starting at 0:")
+
+        # decide the first card to get rid of
+        print()
+        print([str(item) for item in self.playerhand])
+        print("Pick the index of the first card to add to the crib, starting at 0:")
+        while True:
+            try:
+                ind = input()
+                ind = ind
+                if int(ind) not in range(0, len(self.playerhand)):
+                    raise ValueError
+                break
+
+            except:
+                print("invalid card selected")
+        self.crib.append(self.playerhand.pop(int(ind)))
         
-        self.show_player_hand = True
-        self.show_ai_hand = True
+        # decide the second card to get rid of
+        print([str(item) for item in self.playerhand])
+        print("Pick the index of the second card to add to the crib, starting at 0:")
+        while True:
+            try:
+                ind = input()
+                ind = ind
+                if int(ind) not in range(0, len(self.playerhand)):
+                    raise ValueError
+                break
 
-        self.deal()
+            except:
+                print("invalid card selected")
+        self.crib.append(self.playerhand.pop(int(ind)))
+        # pick starter card
+        self.starter.append(self.deck.shuffled.pop(0))
 
     def play_hand(self):
 
@@ -36,14 +88,20 @@ class Game:
 
         if self.dealer == "player":
             self.score_ai_hand()
+            time.sleep(self.event_delay)
             self.score_player_hand()
+            time.sleep(self.event_delay)
             self.score_crib()
+            time.sleep(self.event_delay)
             self.dealer = "ai"
 
         elif self.dealer == "ai":
             self.score_player_hand()
+            time.sleep(self.event_delay)
             self.score_ai_hand()
+            time.sleep(self.event_delay)
             self.score_crib()
+            time.sleep(self.event_delay)
             self.dealer = "player"
         else:
             print("This line was reached in error. self.dealer was set incorrectly")
@@ -124,6 +182,8 @@ class Game:
                     else:
                         print("AI could not play.")
                         pass
+
+                    time.sleep(self.event_delay)
                 
                 if active_player == "player" and len(player_hand)>0:
                     possible, playable_cards = self.play_is_possible(player_hand, running_sum)
@@ -157,16 +217,25 @@ class Game:
             # score hands
             ### Give the active player any points they're owed
             points_for_active_player = 0
+
             # check for 15s
             if running_sum == 15:
                 points_for_active_player += 2
                 print("Fifteen for 2!")
+
             # check for 31s
             if running_sum == 31:
                 points_for_active_player += 2
                 print("Thirty-one for 2!")
                 running_sum = 0
 
+            # check for n of a kind:
+            num_n_of_a_kind = self._check_n_of_a_kind(played_cards)
+            if num_n_of_a_kind >= 2:
+                points_for_active_player += (num_n_of_a_kind)*(num_n_of_a_kind-1)
+                print(f"{num_n_of_a_kind} of a kind!")
+
+            # check for runs
 
             if active_player == "player":
                 self.player_score += points_for_active_player
@@ -177,9 +246,11 @@ class Game:
 
     def _check_n_of_a_kind(self, stack):
 
-        n_of_a_kind = 0
-        newest_card = stack[-1]
-
+        n_of_a_kind = 1
+        if(len(stack) > 0):
+            newest_card = stack[-1]
+        else:
+            return 0
         # loop through the final n elements of the hand
         for l in range(1, len(stack)):
             
@@ -216,62 +287,6 @@ class Game:
         self.ai_score += new_ai_score
         print("AI scored", new_ai_score, "points this hand.")
         print("Total AI score:", self.ai_score)
-
-    def deal(self):
-
-        self.deck.shuffle()
-
-        self.playerhand = list()
-        self.aihand = list()
-
-        # deal 6 cards to player and AI
-        for i in range(0, 12):
-            if i % 2 == 0:
-                self.playerhand.append(self.deck.shuffled.pop(0))
-            else:
-                self.aihand.append(self.deck.shuffled.pop(0))
-
-        #print([str(item) for item in self.playerhand])
-
-        # AI picks two random cards for crib
-        self.crib.append(self.aihand.pop(random.randint(0, 5)))
-        self.crib.append(self.aihand.pop(random.randint(0, 4)))
-
-        # player picks two cards for crib
-        #print("Pick the index of the first card to add to the crib, starting at 0:")
-
-        # decide the first card to get rid of
-        print()
-        print([str(item) for item in self.playerhand])
-        print("Pick the index of the first card to add to the crib, starting at 0:")
-        while True:
-            try:
-                ind = input()
-                ind = ind
-                if int(ind) not in range(0, len(self.playerhand)):
-                    raise ValueError
-                break
-
-            except:
-                print("invalid card selected")
-        self.crib.append(self.playerhand.pop(int(ind)))
-        
-        # decide the second card to get rid of
-        print([str(item) for item in self.playerhand])
-        print("Pick the index of the second card to add to the crib, starting at 0:")
-        while True:
-            try:
-                ind = input()
-                ind = ind
-                if int(ind) not in range(0, len(self.playerhand)):
-                    raise ValueError
-                break
-
-            except:
-                print("invalid card selected")
-        self.crib.append(self.playerhand.pop(int(ind)))
-        # pick starter card
-        self.starter.append(self.deck.shuffled.pop(0))
 
     def score_15s(self, hand):
         # check for 15s
