@@ -9,3 +9,13 @@ In no particular order, for a 5-card scoring pool (4 hand or crib cards + starte
 2. There cannot be more than 4 of a kind because each deck only has 4 of each rank.
 
 3. There cannot be a pair / three of a kind / four of a kind / five of a kind all of a single suit because there is only one card of each suit+rank pair.
+
+
+
+Pseudocode for pegging:
+
+1. Check if each player has a valid card to play (will keep sum at or below 31)
+    - if not, reset the sum and clear the list of played cards.
+2. Players take turns playing cards, starting with the non-dealer.
+- handle scoring, give points to the current player if they earned them
+

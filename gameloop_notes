@@ -1,0 +1,29 @@
+
+On startup:
+
+- Print startup text at the top
+- Player starts as dealer
+
+
+Playing the hand:
+
+- clear screen
+
+- on every draw, draw:
+    . remaining player and AI hands
+    . desired message at the top of the window
+    . current list of played cards (cleared after we pass 31)
+    . current AI and player scores
+
+
+
+    . AI and player hands take up the left side of the screen
+    . played card list can go in the row between AI and player hands
+    . scores go to the right of each hand
+
+- on ai or player turn:
+    . find a valid card to play
+    . play it (add to played card stack)
+    . score any points obtained
+    . update announcement message
+    . redraw board

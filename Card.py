@@ -11,6 +11,9 @@ class Card:
     def __str__(self):
         return self.rank + "" + self.suit
     
+    def __eq__(self, other):
+        return self.rank == other.rank and self.suit == other.suit
+    
     def get_numeric_value(self):
 
         if self.rank in ["J", "Q", "K"]:
