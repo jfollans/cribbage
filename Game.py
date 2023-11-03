@@ -106,6 +106,10 @@ class Game:
         else:
             print("This line was reached in error. self.dealer was set incorrectly")
 
+        print()
+        print(f"Player score: {self.player_score}")
+        print(f"AI score: {self.ai_score}")
+
     def play_is_possible(self, hand, sum):
         # check if it is possible to play at least one card from the given hand at the given pegging sum.
 
@@ -151,9 +155,17 @@ class Game:
             ai_poss, temp = self.play_is_possible(ai_hand, running_sum)
             player_poss, temp = self.play_is_possible(player_hand, running_sum)
 
-            if (not ai_poss) and (not player_poss):
+            if (not ai_poss) and (not player_poss) and running_sum != 31:
                 print("Neither the AI or player have valid cards to play")
-                # TO ADD: give 1 for last points
+                
+                # give 1 for last points
+                print(f"One for last!")
+
+                if active_player == "player":
+                    self.ai_score += 1
+
+                elif active_player == "ai":
+                    self.player_score += 1
 
                 # if neither player can play, reset the sum and list of played cards
                 running_sum = 0
@@ -175,7 +187,7 @@ class Game:
                     if(possible):
                         ai_played_card = playable_cards.pop(random.randint(0, len(playable_cards)-1))
                         ai_hand.remove(ai_played_card)
-                        print("\nAI played", ai_played_card)
+                        print("\nAI played", ai_played_card, "\n")
                         played_cards.append(ai_played_card)
                         running_sum += ai_played_card.get_numeric_value()
 
@@ -206,7 +218,7 @@ class Game:
                         player_played_card = playable_cards.pop(int(played_index))
                         player_hand.remove(player_played_card)
 
-                        print("Player played", player_played_card)
+                        print("Player played", player_played_card, "\n")
                         played_cards.append(player_played_card)
 
                         running_sum += player_played_card.get_numeric_value()
@@ -231,15 +243,19 @@ class Game:
 
             # check for n of a kind:
             num_n_of_a_kind = self._check_n_of_a_kind(played_cards)
+            print(f"{num_n_of_a_kind} of a kind")
             if num_n_of_a_kind >= 2:
                 points_for_active_player += (num_n_of_a_kind)*(num_n_of_a_kind-1)
                 print(f"{num_n_of_a_kind} of a kind!")
 
             # check for runs
+            # TODO
 
+            # give points, swap players
             if active_player == "player":
                 self.player_score += points_for_active_player
                 active_player = "ai"
+
             elif active_player == "ai":
                 self.ai_score += points_for_active_player
                 active_player = "player"
@@ -259,14 +275,14 @@ class Game:
             
             # if they all match, we have n of a kind
             for c in subhand:
-                if c.get_numeric_value() != newest_card.get_numeric_value():
+                if c.get_run_value() != newest_card.get_run_value():
                     return n_of_a_kind
             n_of_a_kind = l
 
         return len(stack)
 
     def score_crib(self):
-        print("\nScoring crib for", self.dealer)
+        print(f"\nScoring {self.dealer} crib...")
         new_crib_score = self.score_hand(self.crib)
         print("Crib scored", new_crib_score, "points.")
         if self.dealer == "player":
@@ -338,7 +354,6 @@ class Game:
         return score
 
     def score_hand(self, hand):
-        print("")
         score = 0
 
         # add starter card to scoring pool
