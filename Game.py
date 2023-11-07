@@ -1,5 +1,6 @@
 from Deck import Deck
 from Card import Card
+from HandScorer import HandScorer
 import random, itertools
 import time
 
@@ -10,6 +11,7 @@ class Game:
     def __init__(self):
 
         self.deck = Deck()
+        self.H = HandScorer()
         
         self.playerhand = list()
         self.aihand = list()
@@ -79,7 +81,8 @@ class Game:
         print()
         self.crib.append(self.playerhand.pop(int(ind)))
 
-        # pick starter card
+        # Clear the starter card, pick a starter card
+        self.starter = list()
         self.starter.append(self.deck.shuffled.pop(0))
 
     def play_hand(self):
@@ -129,8 +132,7 @@ class Game:
         # if there were no possible cards, we return False, [None]
         return is_possible, possible_cards
 
-    def printhand(self, hand, print_indices):
-
+    def printhand(self, hand, print_indices, startercard=False):
         if print_indices:
             i = 0
             for card in hand:
@@ -139,11 +141,12 @@ class Game:
                 i += 1
         else:
             print([str(c) for c in hand])
+            
+        if startercard:
+            print("Starter card: ", str(self.starter[0]))
 
     def play_pegging2(self):
         print("")
-
-        
 
         # have the dealer and player alternate playing cards
         # we need to check for:
@@ -169,7 +172,8 @@ class Game:
             ai_poss, temp = self.play_is_possible(ai_hand, running_sum)
             player_poss, temp = self.play_is_possible(player_hand, running_sum)
 
-            if (not ai_poss) and (not player_poss) and running_sum != 31:
+            #if (not ai_poss) and (not player_poss) and running_sum != 31:
+            if (not ai_poss) and (not player_poss):
                 print("Neither the AI or player have valid cards to play")
                 
                 # give 1 for last points
@@ -285,7 +289,6 @@ class Game:
 
         return points_for_active_player
 
-
     def _check_run_in_pegging(self, stack):
 
         # take a list of all the cards that have been played
@@ -342,8 +345,10 @@ class Game:
         return len(stack)
 
     def score_crib(self):
+
         print(f"\nScoring {self.dealer} crib...")
-        new_crib_score = self.score_hand(self.crib)
+        self.printhand(self.crib, False, True)
+        new_crib_score = self.H.scorehand(self.crib, self.starter[0])
         print("Crib scored", new_crib_score, "points.")
         if self.dealer == "player":
             self.player_score += new_crib_score
@@ -351,68 +356,23 @@ class Game:
             self.ai_score += new_crib_score
 
     def score_player_hand(self):
+
         print("\nScoring player hand...")
-        new_player_score = self.score_hand(self.playerhand)
+        self.printhand(self.playerhand, False, True)
+        new_player_score = self.H.scorehand(self.playerhand, self.starter[0])
         self.player_score += new_player_score
         print("Player scored", new_player_score, "points this hand.")
         print("Total player score:", self.player_score)
 
     def score_ai_hand(self):
+
         print("\nScoring AI hand...")
-        new_ai_score = self.score_hand(self.aihand)
+        self.printhand(self.aihand, False, True)
+        new_ai_score = self.H.scorehand(self.aihand, self.starter[0])
         self.ai_score += new_ai_score
         print("AI scored", new_ai_score, "points this hand.")
         print("Total AI score:", self.ai_score)
-
-    def score_15s(self, hand):
-        # check for 15s
-        values_for_15s = list()
-        num_15s = 0
-        for card in hand:
-            values_for_15s.append(card.get_numeric_value())
-
-        score = 0
-
-        # loop through combinations of all possible lengths
-        for l in range(2, len(values_for_15s)):
-            combs = itertools.combinations(values_for_15s, l)
-            for i in combs:
-                total = sum(i)      # check if this combination sums to 15
-                if total == 15:
-                    score = score + 2   # if so, add 2 to the score
-                    num_15s += 1
-                    
-        if num_15s != 0:
-            score_strings = [f"Fifteen {2*n}!" for n in range(1, num_15s+1)]
-            for s in score_strings: print(s)
-            pass
-
-        return score
     
-    def score_n_of_a_kind(self, hand):
-        # check for pairs / three of a kind / four of a kind
-        # create a dictionary for each rank, add one to the value for each of a card the hand has
-        multiple_dict = dict()
-        for card in hand:
-            if card.rank not in multiple_dict:
-                multiple_dict[card.rank] = 1
-            else:
-                multiple_dict[card.rank] += 1
-
-        score = 0
-        for item in multiple_dict.values():
-            if item == 2:
-                score = score + 2
-                print("Pair!")
-            if item == 3:
-                score = score + 6
-                print("Three of a kind!")
-            if item == 4:
-                score = score + 12
-                print("Four of a kind!")
-
-        return score
-
     def score_hand(self, hand):
         score = 0
 
@@ -437,6 +397,12 @@ class Game:
             score = score + run[0]
             print(run[1], "\bx run of", run[2], "scored", run[0], "points!")
 
+        # check for right jack
+        for c in scoring_pool[0:-1]:
+            if c.rank == "J" and c.suit == scoring_pool[-1].suit:
+                print("The right jack!")
+                score += 1
+
         # check for 4 or 5 (or more) of a suit
         points_from_flush = self._check_for_flush(scoring_pool)
         if points_from_flush != 0:
@@ -448,140 +414,11 @@ class Game:
 
         return score
 
-    def _check_for_flush(self, scoring_pool):
-        # This method assumes that the last card in the scoring pool is the starter card!!
-
-        # check for 4 or 5 (or more) of a suit
-        suit_dict = dict()
-        
-        for card in scoring_pool[0:-1]:
-            if card.suit not in suit_dict:
-                suit_dict[card.suit] = 1
-            else:
-                suit_dict[card.suit] += 1
-
-        points_from_flush = 0
-        for key in suit_dict:
-            if suit_dict[key] == 4 and scoring_pool[-1].suit == key:
-                points_from_flush += 5
-            elif suit_dict[key] == 4:
-                points_from_flush += 4
-        
-        return points_from_flush
-
-    def _check_for_runs(self, hand):
-
-        no_dupes = set()
-        for card in hand:
-            no_dupes.add(card.get_run_value())
-        
-        no_dupes = list(no_dupes)
-        no_dupes.sort()
-
-        # calculate the difference between sequential elements
-        temp2 = no_dupes[1:]
-        temp1 = no_dupes[0:-1]
-        diffs = list()
-
-        for a, b in zip(temp1, temp2):
-            diff = b - a
-            diffs.append(diff)
-
-        diffs.append(-10000) # add a dummy element to the end of the differences to be sure the calculation terminates
-
-        # find all runs of three or more in diffs
-        last_was_run = False
-        run_indices = list()
-        current_run_start = -1
-        current_run_end = -1
-        for i in range(0, len(diffs)-1):
-            
-            subarray = diffs[i:i+2]         # loop through all sequential subarrays with length 2. We only need 2 jumps of size 1 to make a run of 3
-            
-            run = False                     # check if sequential differences are 1
-            
-            if subarray[0] == 1 and subarray[1] == 1:
-                run = True
-            
-            if run and last_was_run:        # if we're continuing an old run
-                current_run_end = i+1
-            
-            elif run and not last_was_run:  # if we're starting a new run
-                current_run_start = i
-                last_was_run = True
-
-            elif not run and last_was_run:  # if we're ending an old run
-                current_run_end = i
-                last_was_run = False
-                run_indices.append((current_run_start, current_run_end))
-                current_run_start = -1
-                current_run_end = -1
-            
-            else:                           # if this isn't a run and the previous wasn't a run
-                pass
-
-        # create a duplicate dictionary
-        multiple_dict = dict()
-        for card in hand:
-            if card.rank not in multiple_dict:
-                multiple_dict[card.rank] = 1
-            else:
-                multiple_dict[card.rank] += 1
-
-
-        # for each run of 3 or more, score it.
-        # a singlet card adds 1 to the run score
-        # x-of-a-kind cards add run to the run score, then multiply the multiplier by x
-        runs_with_scores = list()
-        for run in run_indices:
-            
-            run_elements = no_dupes[run[0]:run[1]+2]
-            #print(run_elements)
-            sum = 0
-            mult = 1
-
-            for elt in run_elements:
-                sum += 1
-                if elt == 11:
-                    elt = "J"
-                if elt == 12:
-                    elt = "Q"
-                if elt == 13:
-                    elt = "K"
-                else:
-                    elt = str(elt)
-                mult *= multiple_dict[elt]
-            score = sum*mult
-
-            runs_with_scores.append([score, mult, run_elements])
-            #print("For", mult, "\bx run:", run_elements, "we score", score, "points")
-
-        # find the run with the maximum score, return it:
-        max_score = 0
-        final_mult = -1
-        run_for_max_score = []
-        for elt in runs_with_scores:
-            if elt[0] > max_score:
-                max_score = elt[0]
-                final_mult = elt[1]
-                run_for_max_score = elt[2]
-
-        return [max_score, final_mult, run_for_max_score]
-
 
 if __name__ == "__main__":
 
 
     G = Game()
-    
-    #hand = list()
-    #hand.append(Card(5, "H"))
-    #hand.append(Card(5, "H"))
-    #hand.append(Card(5, "H"))
-    #hand.append(Card(5, "H"))
-    #hand.append(Card(5, "D"))
-    #print(G._check_for_flush(hand))
-
     G.play_hand()
 
 

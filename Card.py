@@ -12,6 +12,10 @@ class Card:
         return self.rank + "" + self.suit
     
     def __eq__(self, other):
+
+        if other == None:
+            return False
+
         return self.rank == other.rank and self.suit == other.suit
     
     def get_numeric_value(self):
