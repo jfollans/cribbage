@@ -48,7 +48,7 @@ class Game:
 
         # decide the first card to get rid of
         print()
-        print([str(item) for item in self.playerhand])
+        self.printhand(self.playerhand, True)
         print("Pick the index of the first card to add to the crib, starting at 0:")
         while True:
             try:
@@ -60,10 +60,11 @@ class Game:
 
             except:
                 print("invalid card selected")
+        print()
         self.crib.append(self.playerhand.pop(int(ind)))
         
         # decide the second card to get rid of
-        print([str(item) for item in self.playerhand])
+        self.printhand(self.playerhand, True)
         print("Pick the index of the second card to add to the crib, starting at 0:")
         while True:
             try:
@@ -75,7 +76,9 @@ class Game:
 
             except:
                 print("invalid card selected")
+        print()
         self.crib.append(self.playerhand.pop(int(ind)))
+
         # pick starter card
         self.starter.append(self.deck.shuffled.pop(0))
 
@@ -126,6 +129,17 @@ class Game:
         # if there were no possible cards, we return False, [None]
         return is_possible, possible_cards
 
+    def printhand(self, hand, print_indices):
+
+        if print_indices:
+            i = 0
+            for card in hand:
+                if print_indices:
+                    print(i, ": ", str(card))
+                i += 1
+        else:
+            print([str(c) for c in hand])
+
     def play_pegging2(self):
         print("")
 
@@ -173,7 +187,7 @@ class Game:
 
             else:
 
-                print("Running total:", running_sum)
+                print("Running total:", running_sum, "\n")
                 
                 # if at least one player can play, enter the card playing code
 
@@ -187,12 +201,12 @@ class Game:
                     if(possible):
                         ai_played_card = playable_cards.pop(random.randint(0, len(playable_cards)-1))
                         ai_hand.remove(ai_played_card)
-                        print("\nAI played", ai_played_card, "\n")
+                        print("\nAI played", ai_played_card)
                         played_cards.append(ai_played_card)
                         running_sum += ai_played_card.get_numeric_value()
 
                     else:
-                        print("AI could not play.")
+                        print("AI could not play.\n")
                         pass
 
                     time.sleep(self.event_delay)
@@ -202,7 +216,7 @@ class Game:
 
                     if(possible):
                         print("Player hand cards that are valid plays:")
-                        print([str(item) for item in playable_cards])
+                        self.printhand(playable_cards, True)
                         print("Select the index of the card to play:")
 
                         while True:
@@ -214,7 +228,7 @@ class Game:
 
                             except:
                                 print("invalid card selected")
-                        
+                        print()
                         player_played_card = playable_cards.pop(int(played_index))
                         player_hand.remove(player_played_card)
 
@@ -226,39 +240,85 @@ class Game:
                     else:
                         print("There are no legal player moves.")
             
-            # score hands
-            ### Give the active player any points they're owed
-            points_for_active_player = 0
+                # score hands
+                points_for_active_player = self.compute_pegging_points(played_cards)
 
-            # check for 15s
-            if running_sum == 15:
-                points_for_active_player += 2
-                print("Fifteen for 2!")
+                # give points, swap players
+                if active_player == "player":
+                    self.player_score += points_for_active_player
+                    active_player = "ai"
 
-            # check for 31s
-            if running_sum == 31:
-                points_for_active_player += 2
-                print("Thirty-one for 2!")
-                running_sum = 0
+                elif active_player == "ai":
+                    self.ai_score += points_for_active_player
+                    active_player = "player"
 
-            # check for n of a kind:
-            num_n_of_a_kind = self._check_n_of_a_kind(played_cards)
-            print(f"{num_n_of_a_kind} of a kind")
-            if num_n_of_a_kind >= 2:
-                points_for_active_player += (num_n_of_a_kind)*(num_n_of_a_kind-1)
-                print(f"{num_n_of_a_kind} of a kind!")
+    def compute_pegging_points(self, stack):
+        points_for_active_player = 0
 
-            # check for runs
-            # TODO
+        # compute running sum
+        running_sum = 0
+        for c in stack:
+            running_sum += c.get_numeric_value()
+        
+        # check for 15s
+        if running_sum == 15:
+            points_for_active_player += 2
+            print("Fifteen for 2!")
 
-            # give points, swap players
-            if active_player == "player":
-                self.player_score += points_for_active_player
-                active_player = "ai"
+        # check for 31s
+        if running_sum == 31:
+            points_for_active_player += 2
+            print("Thirty-one for 2!")
+            running_sum = 0
 
-            elif active_player == "ai":
-                self.ai_score += points_for_active_player
-                active_player = "player"
+        # check for n of a kind:
+        num_n_of_a_kind = self._check_n_of_a_kind(stack)
+        if num_n_of_a_kind >= 2:
+            points_for_active_player += (num_n_of_a_kind)*(num_n_of_a_kind-1)
+            print(f"{num_n_of_a_kind} of a kind!")
+
+        # check for runs
+        points_from_run = self._check_run_in_pegging(stack)
+        if points_from_run >= 3:
+            print(f"Run of {points_from_run}!")
+            points_for_active_player += points_from_run
+
+        return points_for_active_player
+
+
+    def _check_run_in_pegging(self, stack):
+
+        # take a list of all the cards that have been played
+        current_run_length = 0
+        # get every sublist of the last N elements of the list
+
+        if len(stack) <= 2:
+            return 0
+
+        for i in range(1, len(stack)):
+            
+            sublist = stack[-i:]
+
+            # sort that sublist by rank
+            sorted_ranks = list()
+            for c in sublist:
+                sorted_ranks.append(c.get_run_value())
+            sorted_ranks.sort()
+
+            diffs = list()
+            # compute the differences between the elements of sorted_ranks
+            for a, b in zip(sorted_ranks[0:-1], sorted_ranks[1:]):
+                diffs.append(b-a)
+
+            for elt in diffs:
+                if elt != 1:
+                    # not a run, we should exit and return the last valid length for a run (even if it is zero)
+                    return current_run_length
+                
+            # if the difference between every element of the SORTED sublist is 1, we have a run of length N
+            current_run_length = i
+
+        return current_run_length
 
     def _check_n_of_a_kind(self, stack):
 
@@ -360,17 +420,14 @@ class Game:
         scoring_pool = hand
         scoring_pool.append(self.starter[0])
 
-        print([str(item) for item in scoring_pool])
-
+        self.printhand(scoring_pool, False)
 
         # check for pairs / three of a kind / four of a kind
-        # create a dictionary for each rank, add one to the value for each of a card the hand has
         score_for_n_of_a_kind = self.score_n_of_a_kind(scoring_pool)
         score += score_for_n_of_a_kind
 
         # check for 15s
         score_for_15s = self.score_15s(scoring_pool)
-        
         score += score_for_15s
 
         # check for runs
@@ -381,19 +438,36 @@ class Game:
             print(run[1], "\bx run of", run[2], "scored", run[0], "points!")
 
         # check for 4 or 5 (or more) of a suit
+        points_from_flush = self._check_for_flush(scoring_pool)
+        if points_from_flush != 0:
+            print(f"Flush {points_from_flush}!")
+            score += points_from_flush
+
+        # print the score
+        print("Score: ", score)
+
+        return score
+
+    def _check_for_flush(self, scoring_pool):
+        # This method assumes that the last card in the scoring pool is the starter card!!
+
+        # check for 4 or 5 (or more) of a suit
         suit_dict = dict()
-        for card in scoring_pool:
+        
+        for card in scoring_pool[0:-1]:
             if card.suit not in suit_dict:
                 suit_dict[card.suit] = 1
             else:
                 suit_dict[card.suit] += 1
-        #print("Suit dict:", suit_dict)
 
-        # print scoring pool and score
-        #print([str(item) for item in scoring_pool])
-        print("Score: ", score)
-
-        return score
+        points_from_flush = 0
+        for key in suit_dict:
+            if suit_dict[key] == 4 and scoring_pool[-1].suit == key:
+                points_from_flush += 5
+            elif suit_dict[key] == 4:
+                points_from_flush += 4
+        
+        return points_from_flush
 
     def _check_for_runs(self, hand):
 
@@ -497,5 +571,17 @@ class Game:
 
 if __name__ == "__main__":
 
+
     G = Game()
+    
+    #hand = list()
+    #hand.append(Card(5, "H"))
+    #hand.append(Card(5, "H"))
+    #hand.append(Card(5, "H"))
+    #hand.append(Card(5, "H"))
+    #hand.append(Card(5, "D"))
+    #print(G._check_for_flush(hand))
+
     G.play_hand()
+
+
